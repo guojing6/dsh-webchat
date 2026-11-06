@@ -78,12 +78,96 @@ function loadPlugin() {
   return { probe: host.__probe, hostStorage }
 }
 
+/**
+ * Compare two semantic versions by precedence. The manifest declares a plain
+ * `>=lower <upper` range and DSH evaluates it with `includePrerelease: true`, so
+ * the comparators are ordinary precedence comparisons here too.
+ */
+function compareVersions(left, right) {
+  const parse = (value) => {
+    const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(value)
+    assert.ok(match, `not a semantic version: ${value}`)
+    return { parts: match.slice(1, 4).map(Number), prerelease: match[4] === undefined ? [] : match[4].split('.') }
+  }
+  const a = parse(left)
+  const b = parse(right)
+  for (let index = 0; index < 3; index += 1) if (a.parts[index] !== b.parts[index]) return a.parts[index] - b.parts[index]
+  // A release outranks every prerelease of the same version.
+  if (a.prerelease.length === 0 || b.prerelease.length === 0) return b.prerelease.length - a.prerelease.length
+  for (let index = 0; index < Math.max(a.prerelease.length, b.prerelease.length); index += 1) {
+    const x = a.prerelease[index]
+    const y = b.prerelease[index]
+    if (x === undefined) return -1
+    if (y === undefined) return 1
+    const numericX = /^\d+$/.test(x)
+    const numericY = /^\d+$/.test(y)
+    if (numericX && numericY) {
+      const difference = Number(x) - Number(y)
+      if (difference !== 0) return difference
+    } else if (numericX !== numericY) {
+      return numericX ? -1 : 1
+    } else if (x !== y) {
+      return x < y ? -1 : 1
+    }
+  }
+  return 0
+}
+
+/** Whether the declared host range admits one DSH version. */
+function admitsDsh(version) {
+  const match = /^>=(\S+) <(\S+)$/.exec(MANIFEST.engines?.dsh ?? '')
+  assert.ok(match, 'engines.dsh must be a two-comparator range')
+  return compareVersions(version, match[1]) >= 0 && compareVersions(version, match[2]) < 0
+}
+
 describe('compatibility declaration', () => {
   it('declares the host range DSH actually reads', () => {
     // DSH's gate and dshmarket read engines.dsh (or host peers); a custom
     // dsh.compatibility map is invisible and leaves the plugin "undeclared".
-    assert.equal(MANIFEST.engines?.dsh, '>=0.2.1-alpha.3 <0.2.2-0')
+    assert.equal(MANIFEST.engines?.dsh, '>=0.2.1-alpha.3 <0.2.3-0')
     assert.equal(MANIFEST.dsh?.compatibility, undefined)
+  })
+
+  it('admits the verified DSH 0.2.1 and 0.2.2 releases and refuses the next minor', () => {
+    // 0.2.1 alpha.3 ~ rc.5 (the rc.5 contract) and the 0.2.2 previews whose
+    // contracts were re-checked (0.2.2-rc.1, the packaged Desktop). DSH's own
+    // preflight skips any profile bundle this range refuses, so a missing upper
+    // step silently drops the plugin out of the roster after a host upgrade.
+    for (const version of ['0.2.1-alpha.3', '0.2.1-rc.5', '0.2.1', '0.2.2-alpha.2', '0.2.2-rc.1', '0.2.2']) {
+      assert.equal(admitsDsh(version), true, `DSH ${version} must be admitted`)
+    }
+    for (const version of ['0.2.1-alpha.2', '0.2.3-alpha.1', '0.2.3', '0.3.0']) {
+      assert.equal(admitsDsh(version), false, `DSH ${version} must be refused`)
+    }
+  })
+
+  it('declares the manifest fields the host reads for bundles and client modules', () => {
+    assert.equal(MANIFEST.dsh?.manifestVersion, 1)
+    assert.equal(MANIFEST.dsh?.client?.platform, 'web')
+    assert.equal(MANIFEST.dsh?.bundle?.patch, './cordis.patch.yml')
+    assert.equal(MANIFEST.dsh?.compatibility, undefined)
+  })
+})
+
+describe('bundle patch', () => {
+  it('inserts the chat entry under the package name', () => {
+    // The profile launcher applies this bundle layer over the web roster; the
+    // inserted row's name must be this package or the client module never loads.
+    const patch = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
+    assert.match(patch, /^-\s*insert:/m, 'a bundle patch is a top-level insert list')
+    assert.match(patch, /^\s*-\s*id: chat-entry\r?$/m)
+    assert.match(patch, /^\s+name: '@guojing6\/dsh-deepseek-chat'\r?$/m)
+  })
+})
+
+describe('client module registration', () => {
+  it('registers the bundle under the package name the host serves', () => {
+    // client-modules serves `/plugins/<package>/client.js` and refuses a bundle
+    // that registers any other id, so the registration id is the manifest name.
+    const source = readFileSync(SOURCE, 'utf8')
+    const match = /window\.__ModuleLoader__\.load\(\{\s*id:\s*"([^"]+)"/.exec(source)
+    assert.ok(match, 'the client bundle must register through window.__ModuleLoader__.load')
+    assert.equal(match[1], MANIFEST.name)
   })
 })
 
@@ -420,6 +504,10 @@ describe('activation', () => {
     const guide = definition.guide[0]
     assert.equal(guide.id, 'chat')
     assert.equal(guide.order, 35)
+    // DSH 0.2.2's builtin guide orders: workspace files 10, Forge review 15,
+    // terminal 20, browser 30, session diagnostics 60 — 35 stays between the
+    // browser card and the diagnostics card.
+    assert.ok(guide.order > 30 && guide.order < 60, 'the card must stay between the builtin browser and diagnostics entries')
     assert.equal(guide.commandId, 'deepseek-chat.open', 'the guide card shows the shortcut of this command')
     assert.equal(guide.title(), 'DeepSeek Chat')
     const icon = guide.icon()

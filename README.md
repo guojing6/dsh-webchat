@@ -4,24 +4,37 @@
 
 DeepSeek Harness **Desktop** 客户端插件（desktop profile）：把 **DeepSeek Chat** 放进 DSH 的**右侧栏**，与对话并排使用。**只在 DSH Desktop 生效；Web 端不注册任何 UI。**
 
-**npm 包**：`@guojing6/dsh-deepseek-chat`（当前 `3.1.3`，`latest`），可直接用 `dsh plugin --profile desktop add @guojing6/dsh-deepseek-chat` 安装；也可以从源码安装。详见[安装](#安装)。
+**npm 包**：`@guojing6/dsh-deepseek-chat`（当前 `3.2.0`，`latest`），可直接用 `dsh plugin --profile desktop add @guojing6/dsh-deepseek-chat` 安装；也可以从源码安装。详见[安装](#安装)。
 
 | 入口 | 结果 |
 | --- | --- |
 | 会话头部工具区最左侧的 DeepSeek Chat 鲸鱼按钮（「用 VSCode 打开 / 下载会话日志 / 反馈」的左边） | 在右侧栏打开（或聚焦）DeepSeek Chat 标签页 |
 | 新会话界面（还没开始对话）右上角、打开侧边栏按钮的左边 | 同上（该界面不渲染会话头部工具区，所以按钮通过 frame overlay 定位在展开按钮左侧） |
-| 点「打开侧边栏」后开始界面里的 **DeepSeek Chat** 卡片（工作区文件、新建终端、浏览器、会话数据诊断之间） | 同上：在右侧栏打开 DeepSeek Chat 标签页 |
+| 点「打开侧边栏」后开始界面里的 **DeepSeek Chat** 卡片（工作区文件 / Forge 评审 / 新建终端 / 浏览器之后、会话数据诊断之前） | 同上：在右侧栏打开 DeepSeek Chat 标签页 |
 | **Ctrl+Q**（Windows Desktop；macOS 为 ⌘⌥Q；Desktop Linux 默认不绑定） | 同上；没有打开会话时命令被阻止并在快捷键列表里说明原因 |
 
 右侧栏标签页的标题是 `DeepSeek Chat`，切到别的标签再切回来不会重新加载（`keepMounted`），登录态与页面状态都保留。回答里的网页链接交给 DSH——固定进右侧栏的 Browser 标签，不占用 chat 标签页。
 
-**兼容性（2026-11-01 核对）**：按 DSH **0.2.1-rc.5**（打包 Desktop，Electron 44）核对宿主契约。插件只在 Desktop 激活；DSH 的客户端模块 `platform` 字段只接受 `"web"`（Desktop 与 Web 共用同一份前端 bundle），所以“仅 Desktop”是在运行时用 `dsh-app://` / `data-platform` 判定的，不是 manifest 字段。DSH 的兼容性闸门与 dshmarket 只读取 `package.json` 的 **`engines.dsh`**（或 `@deepseek-ai/dsh*` 的 `peerDependencies`），`dsh.compatibility` 不是宿主认识的字段——之前写在那里的 `dshReleases` 宿主完全忽略，dshmarket 因此显示「未声明宿主要求」。本插件现在声明：
+**兼容性（2026-11-06 核对）**：按 DSH **0.2.2-rc.1**（打包 Desktop，Electron 44.7.0 / Chromium 152）复核宿主契约；0.2.1 系列（alpha.3 ~ rc.5）仍在支持范围内。插件只在 Desktop 激活；DSH 的客户端模块 `platform` 字段只接受 `"web"`（Desktop 与 Web 共用同一份前端 bundle），所以“仅 Desktop”是在运行时用 `dsh-app://` / `data-platform` 判定的，不是 manifest 字段。DSH 的兼容性闸门与 dshmarket 只读取 `package.json` 的 **`engines.dsh`**（或 `@deepseek-ai/dsh*` 的 `peerDependencies`），`dsh.compatibility` 不是宿主认识的字段——之前写在那里的 `dshReleases` 宿主完全忽略，dshmarket 因此显示「未声明宿主要求」。本插件现在声明：
 
 ```json
-"engines": { "dsh": ">=0.2.1-alpha.3 <0.2.2-0" }
+"engines": { "dsh": ">=0.2.1-alpha.3 <0.2.3-0" }
 ```
 
-覆盖 0.2.1 alpha.3 ~ rc.5（含 0.2.1 正式版）。0.2.2 及以后不在声明范围内，DSH 会拒绝加载；要支持新版本，先按新版契约复核，再放宽这个范围。
+覆盖 0.2.1 alpha.3 ~ 0.2.2（含两个系列的正式版与预发布）：宿主用 `semver.satisfies(runtime, range, { includePrerelease: true })` 判定，范围下界带 0.2.1 的预发布比较器，所以 0.2.1 与 0.2.2 的 alpha/rc 都算在内。**0.2.3 及以后不在声明范围内**——DSH 0.2.2 起，启动时的兼容性预检会把不满足声明的 profile bundle 直接跳过（日志 `skipping profile bundle …`），对应 Loader 行被禁用，右侧栏卡片、头部按钮和快捷键会整块消失。所以宿主升级后有两条路：升级到声明覆盖的插件版本；或在插件管理器里为该**精确**版本授权豁免（`dsh plugin --profile desktop allow-version @guojing6/dsh-deepseek-chat@x.y.z --dsh-version 0.2.3-rc.1 --accept-risk`，写进 profile 的 `compatibility.json`）。要长期支持新系列，仍然先复核新版契约再放宽范围。
+
+0.2.1-rc.5 → 0.2.2-rc.1 的复核结论：本插件用到的宿主契约没有破坏性变化，0.2.2 的改动对它都是增量。
+
+- **右侧栏**：0.2.2 增加了浮动面板（`destination`、floating pane）、标签右键菜单、guide 卡片固定/隐藏、`hide()` 与 reveal 高亮。本插件依赖的 `ctx.sidebarRightTabs.register({ id, kind, priority, title, guide, keepMounted })`、`ctx.sidebarRight.openTab(kind)` / `commandTarget()`、按类型 id 分发的 `sidebar.right.pane.tab` 与 `sidebar.right.pane.tab.title` 两个槽位、`useTabInfo` 注入、guide 条目的 `commandId` 快捷键展示都保持原样；正文外层 `.tabBody` 的 flex 尺寸链也没变。
+- **会话头部**：`conversation.session.header.utilities`（list/session）仍是同一个列表；hero 阶段仍打 `data-phase="hero"`，`[data-conversation-header-corner]`（右侧栏展开按钮所在席位）仍在，`shell.overlay`（list/root）也仍是 frame overlay——3.1.2 的测量定位不用改。0.2.2 的内建 guide 顺序是工作区文件 10、Forge 评审 15、新建终端 20、浏览器 30、会话数据诊断 60，插件的 `order: 35` 仍在浏览器与诊断之间。
+- **桌面桥**：`window.dshDesktop.browser` 仍是 `protocolVersion: 1`，`acquire/release/onOpenRequested` 与壳的租约校验（`about:blank#<lease>`、partition 匹配、单次 attach、首个 `dom-ready` 仍须停在 bootstrap 地址、权限/下载一律拒绝）在 0.2.2 未变；第一方 Browser 标签的用法也没变。
+- **客户端模块**：`window.__ModuleLoader__.load({ id, factory })`、`inject` 服务表与 `require("react")` 的平台种子不变；0.2.2 只新增 `require.asset` 供宿主包资源使用，本插件没有用到。
+- **快捷键**：`ctx.shortcuts.register` 的 `defaults`（`desktop:windows` / `desktop:macos`）、`regions`、`resolve` 形状未变。
+- **主题 token**：样式表里的 `--dsw-alias-label-secondary` / `--dsw-alias-interactive-bg-hover` / `--dsw-radius-sm` / `--dsw-focus-ring-*` 都还在。
+
+以上结论用宿主自带的 `@deepseek-ai/dsh-app-boot`（0.2.2-rc.1）实测复核过：`evaluatePluginCompatibility` 对 0.2.1 / 0.2.2 全系列放行、0.2.3 起拒绝；把本包装进临时 profile 的 `dsh.profile.bundles` 后，`loadProfileDirectory` 不再把它列进 `skippedBundles`，`composeEntries` 也组出了 `chat-entry` 行。
+
+**版本历史**：
 
 - **2.1.0 / 2.2.0**：修掉从侧边栏品牌向上找 frame 的老 bug；回答里的链接改走 DSH 的打开方式（右侧栏 Browser 标签）。桌面壳一侧（`dshDesktop` 桥、guest 租约/attach 校验、分区与持久化、`data-platform`）在 alpha.3 → rc.5 之间未变。
 - **2.3.0**：开关从「劫持侧边栏品牌」改成官方扩展点，注册到 `conversation.session.header.utilities`（`order: -100`，最左），并换用 DeepSeek Chat 的鲸鱼 logo。
@@ -32,10 +45,13 @@ DeepSeek Harness **Desktop** 客户端插件（desktop profile）：把 **DeepSe
 - **3.1.1**：新会话界面（hero）也显示 DeepSeek Chat 按钮——该界面用 `hideChrome` 渲染会话头部、不挂载 utilities 行，所以把同一个按钮额外注册到 `conversation.hero.options`（两个槽位按阶段互补，不会重复）；按钮改用 class 样式避免两实例短暂并存时出现重复 DOM id。
 - **3.1.2**：新会话界面的按钮改到**打开侧边栏按钮的左边**——`corner` 是 single 槽且已被展开按钮占用，不能直接加第二个，因此改注册到 `shell.overlay`，运行时测量展开按钮位置把按钮吸附到它左侧，并且只在 `data-phase="hero"` 时显示。
 - **3.1.3**：修兼容性声明——DSH 只认 `engines.dsh`，原来的 `dsh.compatibility.dshReleases` 宿主完全忽略，dshmarket 显示「未声明宿主要求」。改为 `engines.dsh: ">=0.2.1-alpha.3 <0.2.2-0"`；**只保留 Desktop 端**：chat.deepseek.com 的 `frame-ancestors 'none'` 使 Web 内嵌不可能，插件在 Web surface 上直接不激活、不注册任何 UI，删掉 iframe/提示分支；guest 首个 `dom-ready` 的导航延后一个微任务，让壳先登记租约；右侧栏打不开时回退系统浏览器。
+- **3.2.0**：适配 DSH **0.2.2-rc.1**——按新宿主契约逐项复核（右侧栏浮动面板/标签菜单/guide 固定、会话头部与 overlay 槽位、桌面 guest 租约协议、客户端模块装载、快捷键与主题 token），确认没有破坏性变化后把 `engines.dsh` 放宽到 `>=0.2.1-alpha.3 <0.2.3-0`；无行为改动（0.2.2 的启动预检会跳过不满足声明的 bundle，这是这次必须放宽声明的原因）。测试 24 → 28：新增兼容范围（含预发布）、manifest 必需字段、bundle patch 与客户端模块注册 id 的校验。
 
 ## 安装
 
-插件发布在 [npm](https://www.npmjs.com/package/@guojing6/dsh-deepseek-chat)（`latest` = `3.1.3`）。只安装到 **desktop** profile；Web profile 即使装上也不会注册任何 UI。
+插件发布在 [npm](https://www.npmjs.com/package/@guojing6/dsh-deepseek-chat)（`latest` = `3.2.0`）。只安装到 **desktop** profile；Web profile 即使装上也不会注册任何 UI。
+
+> **DSH 升级后先升级插件**：0.2.2 的启动预检会跳过 `engines.dsh` 不匹配的 bundle（日志 `skipping profile bundle …`），旧插件会表现为「装过但完全不出现」。直接跑下面的 `add …@latest` 即可；装完需要从托盘完全退出 Desktop 再启动。
 
 ### 方式一：从 npm 安装（推荐）
 
@@ -44,9 +60,9 @@ DeepSeek Harness **Desktop** 客户端插件（desktop profile）：把 **DeepSe
 dsh plugin --profile desktop add @guojing6/dsh-deepseek-chat
 ```
 
-需要固定版本时写成 `@guojing6/dsh-deepseek-chat@3.1.3`；升级用 `dsh plugin --profile desktop add @guojing6/dsh-deepseek-chat@latest`（`dsh plugin` 会把参数转发给 profile 目录里的 pnpm，所以 pnpm 的 `@version` / `@latest` 语法都可用）。npm 包内只包含 `lib/client.js`、`lib/index.js`、`cordis.patch.yml`、`README.md` 与 `LICENSE`。
+需要固定版本时写成 `@guojing6/dsh-deepseek-chat@3.2.0`；升级用 `dsh plugin --profile desktop add @guojing6/dsh-deepseek-chat@latest`（`dsh plugin` 会把参数转发给 profile 目录里的 pnpm，所以 pnpm 的 `@version` / `@latest` 语法都可用）。npm 包内只包含 `lib/client.js`、`lib/index.js`、`cordis.patch.yml`、`README.md` 与 `LICENSE`。
 
-> npm 的版本列表里还能看到一个 `0.0.0-stage`：这是 npm 对「新包首次发布」的占位版本（staged creation 的公开占位），内容为空、不参与安装；`latest` 指向 `3.1.3`，忽略即可。
+> npm 的版本列表里还能看到一个 `0.0.0-stage`：这是 npm 对「新包首次发布」的占位版本（staged creation 的公开占位），内容为空、不参与安装；`latest` 指向 `3.2.0`，忽略即可。
 
 ### 方式二：从源码安装（开发/离线）
 
@@ -102,9 +118,9 @@ DeepSeek Chat 的登录凭证在 localStorage（`userToken` 与 `__appKit_userIn
 
 ### 二、依赖宿主扩展点（DSH 改版可能失效）
 
-- **标签页/快捷键契约**：`ctx.sidebarRightTabs.register` 的字段形状（`id/kind/priority/title/guide/keepMounted`）、`guide` 条目字段（`id/commandId/order/title/description/icon`）、`sidebar.right.pane.tab` 槽位与 `useTabInfo` 注入、`ctx.shortcuts.register` 的 `defaults/resolve` 形状都照抄 0.2.1-rc.5 的 `sidebar-right` / `sidebar-browser`。宿主若改这些形状，表现是卡片/标签页/快捷键之一消失或报错。
-- **兼容性只认 `engines.dsh`**：`dsh.compatibility` 不是 DSH 的字段，宿主和 dshmarket 都不会读；本插件已改用 `engines.dsh`。宿主升到 0.2.2 后会被 DSH 的兼容性闸门拒绝加载（这是声明范围的预期行为），需要先复核新版契约再放宽范围。
-- **开始界面卡片只在有会话时出现**：右侧栏按会话 id 存状态（官方说明「No surface without a session」），首页/新建会话页没有右侧栏，因此也没有卡片。开始界面卡片顺序基于 DSH 的内建 `order`（工作区文件 10、新建终端 20、浏览器 30、本插件 35），DSH 调整顺序时可能变化。
+- **标签页/快捷键契约**：`ctx.sidebarRightTabs.register` 的字段形状（`id/kind/priority/title/guide/keepMounted`）、`guide` 条目字段（`id/commandId/order/title/description/icon`）、`sidebar.right.pane.tab` 槽位与 `useTabInfo` 注入、`ctx.shortcuts.register` 的 `defaults/resolve` 形状都照抄 0.2.2-rc.1 的 `sidebar-right` / `sidebar-browser`（0.2.1-rc.5 以来未变）。宿主若改这些形状，表现是卡片/标签页/快捷键之一消失或报错。
+- **兼容性只认 `engines.dsh`**：`dsh.compatibility` 不是 DSH 的字段，宿主和 dshmarket 都不会读；本插件已改用 `engines.dsh`。DSH 0.2.2 起启动预检会跳过声明不满足的 bundle（对应 Loader 行被禁用），界面表现是插件「整块消失」而不是报错；临时应急可以用 `dsh plugin allow-version` 为该精确版本授权，长期支持仍要先复核新版契约再放宽 `engines.dsh`。
+- **开始界面卡片只在有会话时出现**：右侧栏按会话 id 存状态（官方说明「No surface without a session」），首页/新建会话页没有右侧栏，因此也没有卡片。开始界面卡片顺序基于 DSH 的内建 `order`（0.2.2：工作区文件 10、Forge 评审 15、新建终端 20、浏览器 30、会话数据诊断 60；本插件 35），DSH 调整顺序时可能变化。
 - **`useTabInfo` 是框架注入的**：正文组件从 props 读它拿 `tab.id`；若 DSH 改名，正文仍能渲染，但 tab 切换时的复用判断会退化为固定值（guest 仍在，只是不按 tab 重建）。
 - **鲸鱼 logo 是内联的站点 favicon**：取自 chat.deepseek.com 的 `favicon.svg`（#4D6BFE），不联网、不随站点更新；DeepSeek 换品牌时需手动替换。
 - **会话头部按钮同样依赖槽位**：`conversation.session.header.utilities` 改名则按钮消失（不影响右侧栏卡片与快捷键）。
@@ -130,9 +146,9 @@ DeepSeek Chat 的登录凭证在 localStorage（`userToken` 与 `__appKit_userIn
 
 ```sh
 npm run check   # 语法检查（node --check lib/client.js && lib/index.js）
-npm test        # 24 个用例（node --test，无外部依赖）
+npm test        # 28 个用例（node --test，无外部依赖）
 # 沙箱禁止子进程时（node --test 报 spawn EPERM）：
 npm run test:sandbox   # 等价于 node --test --test-isolation=none
 ```
 
-`test/session.test.mjs` 用桩 DOM 加载插件本体，覆盖：兼容性声明（`engines.dsh` 存在、`dsh.compatibility` 不存在）、guest 存储快照的裁剪/异常上报、快照回写与失败上报、宿主侧快照的版本与来源校验；**激活冒烟测试**——直接跑真实源码的 `apply`，断言右侧栏类型注册（id/kind/priority/keepMounted/guide 卡片顺序与 commandId/图标）、正文与 chip 标题两个槽位 key、chip 标题组件（鲸鱼 logo + 文字 + tooltip）、新会话 overlay 按钮槽位（独立 id，hero 阶段外自动隐藏）、会话头部按钮仍在 `order < -10` 的最左位置、`Ctrl+Q` 命令的默认绑定与「无会话被阻止」、右侧栏打不开时回退系统浏览器、Web surface 上完全惰性（零注册、零样式）、语言跟随、样式表归属、停用后注册与样式全部撤回；以及**标签页 guest**——挂载正文时申请租约并塞入 bootstrap `<webview>`、卸载时退租与移除、首个 `dom-ready` 先让壳登记租约再换 UA 并进首页、有快照时先走种子页并回写、链接进 Browser 标签或回退系统浏览器、重复 ref 不重复建 guest。桩 guest 照抄 Electron 的契约：**`dom-ready` 之前任何方法都抛错**。
+`test/session.test.mjs` 用桩 DOM 加载插件本体，覆盖：兼容性声明（`engines.dsh` 的两段范围与预发布判定——0.2.1/0.2.2 全系列通过、0.2.3 起拒绝；manifest 的 `manifestVersion`/`client.platform`/`bundle.patch`；bundle patch 的 `chat-entry` 插入行与包名；客户端模块的 `__ModuleLoader__.load` 注册 id 与包名一致）、guest 存储快照的裁剪/异常上报、快照回写与失败上报、宿主侧快照的版本与来源校验；**激活冒烟测试**——直接跑真实源码的 `apply`，断言右侧栏类型注册（id/kind/priority/keepMounted/guide 卡片顺序与 commandId/图标、卡片仍夹在浏览器 30 与诊断 60 之间）、正文与 chip 标题两个槽位 key、chip 标题组件（鲸鱼 logo + 文字 + tooltip）、新会话 overlay 按钮槽位（独立 id，hero 阶段外自动隐藏）、会话头部按钮仍在 `order < -10` 的最左位置、`Ctrl+Q` 命令的默认绑定与「无会话被阻止」、右侧栏打不开时回退系统浏览器、Web surface 上完全惰性（零注册、零样式）、语言跟随、样式表归属、停用后注册与样式全部撤回；以及**标签页 guest**——挂载正文时申请租约并塞入 bootstrap `<webview>`、卸载时退租与移除、首个 `dom-ready` 先让壳登记租约再换 UA 并进首页、有快照时先走种子页并回写、链接进 Browser 标签或回退系统浏览器、重复 ref 不重复建 guest。桩 guest 照抄 Electron 的契约：**`dom-ready` 之前任何方法都抛错**。
