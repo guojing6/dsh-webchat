@@ -33,7 +33,7 @@ DeepSeek Harness **Desktop** 客户端插件：把 **9 个内置网页版 AI 对
 | 站点 | 地址 | 默认显示 | 说明 |
 | --- | --- | --- | --- |
 | DeepSeek | `https://chat.deepseek.com/` | ✅ | 默认站点 |
-| 通义千问 | `https://chat.qwen.ai/` | ✅ | |
+| 通义千问 | `https://www.qianwen.com/` | ✅ | |
 | 豆包 | `https://www.doubao.com/chat/` | ✅ | |
 | Kimi | `https://www.kimi.com/` | ✅ | 未登录时可能先看到官网首页，登录后进入对话 |
 | 智谱清言 | `https://chatglm.cn/` | ✅ | |
