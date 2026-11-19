@@ -50,6 +50,7 @@ const EXPECTED_PROVIDERS = [
   "mistral",
   "poe",
   "huggingchat",
+  "zai",
 ];
 
 function compareVersions(left, right) {
@@ -631,7 +632,7 @@ function createCookieJar(initial = "") {
 
 test("manifest, patch and server entry are consistent", () => {
   assert.equal(packageJson.name, PLUGIN_ID);
-  assert.equal(packageJson.version, "4.1.0");
+  assert.equal(packageJson.version, "4.2.0");
   assert.equal(packageJson.type, "module");
   assert.equal(packageJson.main, "lib/index.js");
   assert.equal(packageJson.dsh.manifestVersion, 1);
@@ -670,17 +671,17 @@ test("the client module is a lazy factory that only requires react", () => {
     "locale",
   ]);
   assert.equal(loaded.window.__ModuleLoader__ !== undefined, true);
-  assert.equal(loaded.probe.PROVIDERS.length, 19);
+  assert.equal(loaded.probe.PROVIDERS.length, 20);
 });
 
-test("the provider catalog is nineteen distinct https origins with inline icons", () => {
+test("the provider catalog is twenty distinct https origins with inline icons", () => {
   const loaded = loadPlugin();
   const providers = loaded.probe.PROVIDERS;
   assert.deepEqual(
     providers.map((provider) => provider.id),
     EXPECTED_PROVIDERS,
   );
-  assert.equal(loaded.probe.PROVIDER_BY_ID.size, 19);
+  assert.equal(loaded.probe.PROVIDER_BY_ID.size, 20);
   for (const provider of providers) {
     assert.ok(provider.origin.startsWith("https://"), provider.id + " should use https");
     assert.ok(provider.url.startsWith(provider.origin + "/") || provider.url === provider.origin, provider.id);
@@ -738,7 +739,7 @@ test("apply registers the tab, guide, body, title, header button and shortcut", 
   assert.equal(guide.commandId, COMMAND_ID);
   assert.equal(guide.order, 35);
   assert.equal(guide.title(), "网页版 AI");
-  assert.match(guide.description(), /19/);
+  assert.match(guide.description(), /20/);
   assert.match(guide.description(), /启用/);
   assert.equal(typeof guide.icon, "function");
 
@@ -861,7 +862,7 @@ test("the tab title follows the active provider published by the body", () => {
   assert.equal(textOf(titleSlot.component(info)), "网页版 AI");
 });
 
-test("the body shows eight provider buttons and lazily mounts only the active pane", () => {
+test("the body shows nine provider buttons and lazily mounts only the active pane", () => {
   const loaded = activate();
   const bodySlot = loaded.registrations.slots.find(
     (entry) => entry.spec.name === "sidebar.right.pane.tab",
@@ -872,10 +873,10 @@ test("the body shows eight provider buttons and lazily mounts only the active pa
   const providerButtons = buttons.filter((button) =>
     button.props.className === "dsh-webchat-provider",
   );
-  assert.equal(providerButtons.length, 8);
+  assert.equal(providerButtons.length, 9);
   assert.deepEqual(
     providerButtons.map((button) => button.props["aria-label"]),
-    ["DeepSeek", "通义千问", "豆包", "Kimi", "智谱清言", "腾讯元宝", "ChatGPT", "Gemini"],
+    ["DeepSeek", "通义千问", "豆包", "Kimi", "智谱清言", "腾讯元宝", "ChatGPT", "Gemini", "Z.ai"],
   );
   assert.equal(providerButtons[0].props["data-active"], "true");
   assert.equal(providerButtons[0].props["aria-pressed"], true);
@@ -917,10 +918,11 @@ test("the body starts from the last provider stored by the host", () => {
   assert.equal(stage.props.children[0].props.provider.id, "kimi");
 });
 
-test("the enabled-provider set defaults to the original eight and persists changes", () => {
+test("the enabled-provider set defaults to the original nine and persists changes", () => {
   const loaded = loadPlugin();
   const enabled = loaded.probe.readEnabledProviders();
-  assert.deepEqual([...enabled], EXPECTED_PROVIDERS.slice(0, 8));
+  assert.deepEqual([...enabled], loaded.probe.DEFAULT_ENABLED_IDS);
+  assert.equal(enabled.has("zai"), true);
   assert.equal(enabled.has("claude"), false);
 
   loaded.probe.writeEnabledProviders(new Set(["claude", "kimi"]));
