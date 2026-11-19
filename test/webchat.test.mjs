@@ -372,10 +372,22 @@ function loadPlugin(options = {}) {
     "SESSION_VERSION",
     "LAST_PROVIDER_KEY",
     "ENABLED_KEY",
+    "CUSTOM_KEY",
+    "ORDER_KEY",
+    "CUSTOM_LIMIT",
     "DEFAULT_ENABLED_IDS",
     "readEnabledProviders",
     "writeEnabledProviders",
     "pickActiveProvider",
+    "readCustomProviders",
+    "writeCustomProviders",
+    "readProviderOrder",
+    "writeProviderOrder",
+    "applyProviderOrder",
+    "orderedProviders",
+    "makeCustomProvider",
+    "normalizeCustomUrl",
+    "providerName",
     "SNAPSHOT_LIMIT",
     "COOKIE_LIMIT",
     "WORKSPACE_KEY",
@@ -632,7 +644,7 @@ function createCookieJar(initial = "") {
 
 test("manifest, patch and server entry are consistent", () => {
   assert.equal(packageJson.name, PLUGIN_ID);
-  assert.equal(packageJson.version, "4.2.0");
+  assert.equal(packageJson.version, "4.3.0");
   assert.equal(packageJson.type, "module");
   assert.equal(packageJson.main, "lib/index.js");
   assert.equal(packageJson.dsh.manifestVersion, 1);
@@ -807,7 +819,8 @@ test("the header button opens the webchat tab, and falls back when it cannot", (
   const glyph = button.props.children;
   assert.equal(typeof glyph.type, "function");
   const glyphElement = glyph.type(glyph.props);
-  assert.match(glyphElement.props.dangerouslySetInnerHTML.__html, /<rect/);
+  assert.match(glyphElement.props.dangerouslySetInnerHTML.__html, /<path/);
+  assert.doesNotMatch(glyphElement.props.dangerouslySetInnerHTML.__html, /<rect/);
   button.props.onClick();
   assert.deepEqual(loaded.registrations.openTabs, [{ kind: TAB_KIND, params: undefined }]);
 
@@ -955,6 +968,89 @@ test("a stored provider list filters unknown ids and activates an enabled fallba
   assert.equal(providerButtons[0].props["data-active"], "true");
   const stage = findAll(body, (element) => element.props.className === "dsh-webchat-stage")[0];
   assert.equal(stage.props.children[0].props.provider.id, "claude");
+});
+
+test("custom sites validate, persist and participate in the provider order", () => {
+  const loaded = loadPlugin();
+  assert.equal(loaded.probe.normalizeCustomUrl("ftp://example.com/chat"), null);
+  assert.equal(loaded.probe.normalizeCustomUrl("javascript:alert(1)"), null);
+  const provider = loaded.probe.makeCustomProvider(
+    "My AI",
+    new URL("https://example.com/chat"),
+  );
+  assert.match(provider.id, /^custom-/);
+  assert.equal(provider.origin, "https://example.com");
+  assert.equal(provider.url, "https://example.com/chat");
+  loaded.probe.writeCustomProviders([provider]);
+  assert.deepEqual(
+    loaded.probe.readCustomProviders().map((item) => [item.id, item.name, item.origin]),
+    [[provider.id, "My AI", "https://example.com"]],
+  );
+  const order = loaded.probe.readProviderOrder();
+  assert.equal(order[order.length - 1], provider.id);
+  loaded.probe.writeProviderOrder([
+    provider.id,
+    ...order.filter((id) => id !== provider.id),
+  ]);
+  const providers = loaded.probe.applyProviderOrder(
+    loaded.probe.readCustomProviders(),
+    loaded.probe.readProviderOrder(),
+  );
+  assert.equal(providers[0].id, provider.id);
+  assert.equal(loaded.probe.providerName(provider, (key) => key), "My AI");
+});
+
+test("custom sites reject unsafe URLs and unknown ids keep the defaults clean", () => {
+  const loaded = loadPlugin();
+  loaded.storage.setItem(
+    loaded.probe.CUSTOM_KEY,
+    JSON.stringify([
+      { id: "custom-bad", name: "Bad", url: "javascript:alert(1)" },
+      { id: "custom-good", name: "  Good  ", url: "https://example.org/app" },
+    ]),
+  );
+  const list = loaded.probe.readCustomProviders();
+  assert.deepEqual(list.map((item) => [item.id, item.name]), [
+    ["custom-good", "Good"],
+  ]);
+  loaded.storage.setItem(
+    loaded.probe.ENABLED_KEY,
+    JSON.stringify([list[0].id, "kimi", "missing"]),
+  );
+  assert.deepEqual([...loaded.probe.readEnabledProviders()], [list[0].id, "kimi"]);
+  loaded.probe.writeEnabledProviders(
+    new Set([list[0].id, "kimi"]),
+    [list[0], ...loaded.probe.PROVIDERS],
+  );
+  assert.equal(
+    loaded.storage.getItem(loaded.probe.ENABLED_KEY),
+    JSON.stringify([list[0].id, "kimi"]),
+  );
+});
+
+test("the body renders an enabled custom site as a normal provider", () => {
+  const loaded = activate();
+  loaded.storage.setItem(
+    loaded.probe.CUSTOM_KEY,
+    JSON.stringify([
+      { id: "custom-mine", name: "My AI", url: "https://example.com/chat" },
+    ]),
+  );
+  loaded.storage.setItem(
+    loaded.probe.ENABLED_KEY,
+    JSON.stringify(["custom-mine"]),
+  );
+  const bodySlot = loaded.registrations.slots.find(
+    (entry) => entry.spec.name === "sidebar.right.pane.tab",
+  );
+  const body = bodySlot.component({ useTabInfo: () => ({ tab: { id: "tab-1" } }) });
+  const buttons = findAll(
+    body,
+    (element) => element.type === "button" && element.props.className === "dsh-webchat-provider",
+  );
+  assert.equal(buttons.length, 1);
+  assert.equal(buttons[0].props["aria-label"], "My AI");
+  assert.equal(buttons[0].props["data-active"], "true");
 });
 
 test("the body shows an empty state when every provider is disabled", () => {
