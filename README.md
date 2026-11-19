@@ -1,8 +1,8 @@
 # @guojing6/dsh-webchat
 
-DeepSeek Harness **Desktop** 客户端插件：把 **9 个内置网页版 AI 对话站点**和**你自己的站点**收进 DSH 的**右侧栏**，一个标签页里随时切换、排序，和对话并排使用。
+DeepSeek Harness **Desktop** 客户端插件：把 **7 个内置网页版 AI 对话站点**和**你自己的站点**收进 DSH 的**右侧栏**，一个标签页里随时切换、排序，和对话并排使用。
 
-内置站点为 DeepSeek、通义千问、豆包、Kimi、智谱清言、ChatGPT、Gemini、Grok、Z.ai，默认全部显示；点工具栏的**齿轮 → 选择网站**即可自由启用、关闭或排序。
+内置站点为 DeepSeek、通义千问、豆包、Kimi、智谱清言、ChatGPT、Z.ai，默认全部显示；点工具栏的**齿轮 → 选择网站**即可自由启用、关闭或排序。
 
 **只在 DSH Desktop 生效；Web 端不注册任何 UI。** 这是对原 `@guojing6/dsh-deepseek-chat`（3.x，只支持 DeepSeek Chat）的多站点重写，包名、标签类型和存储键都已更换。
 
@@ -38,11 +38,9 @@ DeepSeek Harness **Desktop** 客户端插件：把 **9 个内置网页版 AI 对
 | Kimi | `https://www.kimi.com/` | ✅ | 未登录时可能先看到官网首页，登录后进入对话 |
 | 智谱清言 | `https://chatglm.cn/` | ✅ | |
 | ChatGPT | `https://chatgpt.com/` | ✅ | 需要能访问该站点的网络 |
-| Gemini | `https://gemini.google.com/app` | ✅ | 需要能访问该站点的网络 |
-| Grok | `https://grok.com/` | ✅ | |
 | Z.ai | `https://chat.z.ai/` | ✅ | 智谱国际版，GLM 系列 |
 
-内置站点只保留这 9 个；其他网页版 AI 可以用“添加自定义站点”加入，页面能否打开取决于网络与站点策略。
+内置站点只保留这 7 个；其他网页版 AI 可以用“添加自定义站点”加入，页面能否打开取决于网络与站点策略。
 
 ## 兼容性
 
@@ -85,7 +83,7 @@ dsh plugin --profile desktop remove @guojing6/dsh-webchat
 
 - **纯客户端插件**：`lib/index.js` 只有空的服务端 `apply()`；`lib/client.js` 是单个 `window.__ModuleLoader__.load({ id, factory })`，只 `require("react")`，不依赖其他运行时模块。
 - **一个标签类型，九个内置站点 + 自定义站点**：标签类型 `webchat`。工具栏只渲染启用的站点；每个访问过的启用站点各有一个内嵌 `webview`，未访问或已关闭的站点不创建。全部站点共用一个 DSH 浏览器工作区租约（`acquire("dsh-webchat")`），每个 `webview` 有自己的 lease。
-- **启用/关闭与排序**：启用结果存进宿主 `dsh-app://app` 的 `localStorage`，键 `dsh-webchat:enabled-providers`（JSON 数组）；顺序存在 `dsh-webchat:provider-order`。默认值是这 9 个站点；关闭当前站点会切到下一个启用站点；全部关闭时进入空状态。关闭站点会卸载对应 `webview`。
+- **启用/关闭与排序**：启用结果存进宿主 `dsh-app://app` 的 `localStorage`，键 `dsh-webchat:enabled-providers`（JSON 数组）；顺序存在 `dsh-webchat:provider-order`。默认值是这 7 个站点；关闭当前站点会切到下一个启用站点；全部关闭时进入空状态。关闭站点会卸载对应 `webview`。
 - **自定义站点**：名称 + http(s) 网址存进 `dsh-webchat:custom-providers`（JSON 数组，最多 40 个），沿用内置站点的 `webview`、启用/关闭、排序、重载、外开和按 id 隔离的登录态镜像；删除自定义站点会同时从启用集合和顺序里移除，删除前需在设置面板里二次确认。
 - **登录态镜像**：DSH 的右侧栏浏览器分区是内存分区，Desktop 重启后丢失。插件在站点加载完成、停止加载、每 60 秒以及销毁时，读取该站点的 `localStorage` 与 `document.cookie`，按站点写入宿主 `dsh-app://app` 的 `localStorage`（键 `dsh-webchat:session:<provider>`，版本 2）。下次打开先加载该站点的 `robots.txt` 作为引导页，写入快照后再进入应用页。
 - **UA**：内嵌 `webview` 的 UA 由插件重建为标准 Chromium UA，去掉 Electron / 产品标记，避免站点把内置浏览器当成不支持的客户端。
@@ -100,7 +98,7 @@ dsh plugin --profile desktop remove @guojing6/dsh-webchat
 - **ChatGPT / Gemini 的可达性**：这两个站点在部分网络环境不可达；插件不做代理，失败时显示错误卡片，并提示开启系统代理 / TUN 后重试。
 - **站点侧验证**：部分站点可能先显示登录页或人机验证页；这是站点侧策略，验证通过后可以正常使用。
 - **页面结构会变**：插件不注入站点脚本、不解析对话内容，只负责嵌入与登录态镜像；站点改版不影响基本打开，但官网落地页/登录跳转可能变化。
-- **内存**：每个访问过且启用的站点都保留一个 `webview`；9 个内置站点外加自定义站点都启用并访问会明显增加内存。关闭站点会卸载并释放。
+- **内存**：每个访问过且启用的站点都保留一个 `webview`；7 个内置站点外加自定义站点都启用并访问会明显增加内存。关闭站点会卸载并释放。
 - **快捷键冲突**：`Ctrl+Q` 是 Desktop 默认；如果与其他插件冲突，可在 DSH 快捷键设置里改。
 - **标签类型固定为一个**：不支持同时开两个“网页版 AI”标签；需要并排对比时用站点切换，或在浏览器里另开。
 
@@ -111,7 +109,7 @@ npm run check   # node --check lib/client.js && node --check lib/index.js
 npm test        # node --test，33 个用例
 ```
 
-测试覆盖：manifest / patch / 服务端入口一致性、懒加载工厂、9 个内置站点目录、locale 键对齐、Web 端惰性、注册与清理、头部按钮、快捷键阻止/执行、标签标题跟随站点、默认 9 个站点按钮与懒挂载、启用集合持久化/过滤/空状态/当前站点回退、自定义站点校验/持久化/排序/删除、登录态读写与上限、快照往返/过期/空快照、guest 租约/UA/引导页/错误路径、弹窗路由、销毁时抓取与释放、轮询抓取。
+测试覆盖：manifest / patch / 服务端入口一致性、懒加载工厂、7 个内置站点目录、locale 键对齐、Web 端惰性、注册与清理、头部按钮、快捷键阻止/执行、标签标题跟随站点、默认 7 个站点按钮与懒挂载、启用集合持久化/过滤/空状态/当前站点回退、自定义站点校验/持久化/排序/删除、登录态读写与上限、快照往返/过期/空快照、guest 租约/UA/引导页/错误路径、弹窗路由、销毁时抓取与释放、轮询抓取。
 
 ## 版本历史
 

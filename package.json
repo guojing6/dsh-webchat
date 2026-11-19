@@ -1,7 +1,7 @@
 {
   "name": "@guojing6/dsh-webchat",
-  "version": "4.5.1",
-  "description": "DeepSeek Harness Desktop client plugin: one right-sidebar tab for 9 web AI chat sites (DeepSeek, Qwen, Doubao, Kimi, Zhipu, ChatGPT, Gemini, Grok, Z.ai), with a provider switcher, per-site visibility toggles, custom sites with confirmed deletion, reordering, guide card, Ctrl+Q and a session-header button. Desktop-only; the Web surface registers no UI.",
+  "version": "4.5.2",
+  "description": "DeepSeek Harness Desktop client plugin: one right-sidebar tab for 7 web AI chat sites (DeepSeek, Qwen, Doubao, Kimi, Zhipu, ChatGPT, Z.ai), with a provider switcher, per-site visibility toggles, custom sites with confirmed deletion, reordering, guide card, Ctrl+Q and a session-header button. Desktop-only; the Web surface registers no UI.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -43,9 +43,8 @@
     "doubao",
     "kimi",
     "zhipu",
-    "yuanbao",
     "chatgpt",
-    "gemini"
+    "zai"
   ],
   "license": "MIT",
   "repository": {
