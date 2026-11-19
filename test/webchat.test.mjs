@@ -36,20 +36,9 @@ const EXPECTED_PROVIDERS = [
   "doubao",
   "kimi",
   "zhipu",
-  "yuanbao",
   "chatgpt",
   "gemini",
-  "wenxin",
-  "spark",
-  "tiangong",
-  "sensetime",
-  "zhinao",
-  "claude",
-  "perplexity",
   "grok",
-  "mistral",
-  "poe",
-  "huggingchat",
   "zai",
 ];
 
@@ -645,7 +634,7 @@ function createCookieJar(initial = "") {
 
 test("manifest, patch and server entry are consistent", () => {
   assert.equal(packageJson.name, PLUGIN_ID);
-  assert.equal(packageJson.version, "4.4.0");
+  assert.equal(packageJson.version, "4.5.0");
   assert.equal(packageJson.type, "module");
   assert.equal(packageJson.main, "lib/index.js");
   assert.equal(packageJson.dsh.manifestVersion, 1);
@@ -684,17 +673,17 @@ test("the client module is a lazy factory that only requires react", () => {
     "locale",
   ]);
   assert.equal(loaded.window.__ModuleLoader__ !== undefined, true);
-  assert.equal(loaded.probe.PROVIDERS.length, 20);
+  assert.equal(loaded.probe.PROVIDERS.length, 9);
 });
 
-test("the provider catalog is twenty distinct https origins with inline icons", () => {
+test("the provider catalog is nine distinct https origins with inline icons", () => {
   const loaded = loadPlugin();
   const providers = loaded.probe.PROVIDERS;
   assert.deepEqual(
     providers.map((provider) => provider.id),
     EXPECTED_PROVIDERS,
   );
-  assert.equal(loaded.probe.PROVIDER_BY_ID.size, 20);
+  assert.equal(loaded.probe.PROVIDER_BY_ID.size, 9);
   for (const provider of providers) {
     assert.ok(provider.origin.startsWith("https://"), provider.id + " should use https");
     assert.ok(provider.url.startsWith(provider.origin + "/") || provider.url === provider.origin, provider.id);
@@ -752,7 +741,7 @@ test("apply registers the tab, guide, body, title, header button and shortcut", 
   assert.equal(guide.commandId, COMMAND_ID);
   assert.equal(guide.order, 35);
   assert.equal(guide.title(), "网页版 AI");
-  assert.match(guide.description(), /20/);
+  assert.match(guide.description(), /9/);
   assert.match(guide.description(), /启用/);
   assert.equal(typeof guide.icon, "function");
 
@@ -890,7 +879,7 @@ test("the body shows nine provider buttons and lazily mounts only the active pan
   assert.equal(providerButtons.length, 9);
   assert.deepEqual(
     providerButtons.map((button) => button.props["aria-label"]),
-    ["DeepSeek", "通义千问", "豆包", "Kimi", "智谱清言", "腾讯元宝", "ChatGPT", "Gemini", "Z.ai"],
+    ["DeepSeek", "通义千问", "豆包", "Kimi", "智谱清言", "ChatGPT", "Gemini", "Grok", "Z.ai"],
   );
   assert.equal(providerButtons[0].props["data-active"], "true");
   assert.equal(providerButtons[0].props["aria-pressed"], true);
@@ -937,14 +926,14 @@ test("the enabled-provider set defaults to the original nine and persists change
   const enabled = loaded.probe.readEnabledProviders();
   assert.deepEqual([...enabled], loaded.probe.DEFAULT_ENABLED_IDS);
   assert.equal(enabled.has("zai"), true);
-  assert.equal(enabled.has("claude"), false);
+  assert.equal(enabled.has("grok"), true);
 
-  loaded.probe.writeEnabledProviders(new Set(["claude", "kimi"]));
+  loaded.probe.writeEnabledProviders(new Set(["grok", "kimi"]));
   assert.equal(
     loaded.storage.getItem(loaded.probe.ENABLED_KEY),
-    JSON.stringify(["kimi", "claude"]),
+    JSON.stringify(["kimi", "grok"]),
   );
-  assert.deepEqual([...loaded.probe.readEnabledProviders()], ["kimi", "claude"]);
+  assert.deepEqual([...loaded.probe.readEnabledProviders()], ["kimi", "grok"]);
 
   loaded.probe.writeEnabledProviders(new Set());
   assert.deepEqual([...loaded.probe.readEnabledProviders()], []);
@@ -952,7 +941,7 @@ test("the enabled-provider set defaults to the original nine and persists change
 
 test("a stored provider list filters unknown ids and activates an enabled fallback", () => {
   const loaded = loadPlugin();
-  loaded.storage.setItem(loaded.probe.ENABLED_KEY, JSON.stringify(["claude", "nope"]));
+  loaded.storage.setItem(loaded.probe.ENABLED_KEY, JSON.stringify(["grok", "nope"]));
   loaded.storage.setItem(LAST_PROVIDER_KEY, "deepseek");
   const harness = createContext(loaded.probe);
   loaded.exports.apply(harness.ctx);
@@ -965,10 +954,10 @@ test("a stored provider list filters unknown ids and activates an enabled fallba
     (element) => element.props.className === "dsh-webchat-provider",
   );
   assert.equal(providerButtons.length, 1);
-  assert.equal(providerButtons[0].props["aria-label"], "Claude");
+  assert.equal(providerButtons[0].props["aria-label"], "Grok");
   assert.equal(providerButtons[0].props["data-active"], "true");
   const stage = findAll(body, (element) => element.props.className === "dsh-webchat-stage")[0];
-  assert.equal(stage.props.children[0].props.provider.id, "claude");
+  assert.equal(stage.props.children[0].props.provider.id, "grok");
 });
 
 test("custom sites validate, persist and participate in the provider order", () => {

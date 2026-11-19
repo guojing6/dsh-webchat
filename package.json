@@ -1,7 +1,7 @@
 {
   "name": "@guojing6/dsh-webchat",
-  "version": "4.4.0",
-  "description": "DeepSeek Harness Desktop client plugin: one right-sidebar tab for 20 web AI chat sites (DeepSeek, Qwen, Doubao, Kimi, Zhipu, Yuanbao, ChatGPT, Gemini, Wenxin, Spark, Tiangong, SenseChat, 360 Zhinao, Claude, Perplexity, Grok, Mistral, Poe, HuggingChat, Z.ai), with a provider switcher, per-site visibility toggles, custom sites with confirmed deletion, reordering, guide card, Ctrl+Q and a session-header button. Desktop-only; the Web surface registers no UI.",
+  "version": "4.5.0",
+  "description": "DeepSeek Harness Desktop client plugin: one right-sidebar tab for 9 web AI chat sites (DeepSeek, Qwen, Doubao, Kimi, Zhipu, ChatGPT, Gemini, Grok, Z.ai), with a provider switcher, per-site visibility toggles, custom sites with confirmed deletion, reordering, guide card, Ctrl+Q and a session-header button. Desktop-only; the Web surface registers no UI.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
