@@ -1,7 +1,7 @@
 {
-  "name": "@guojing6/dsh-deepseek-chat",
-  "version": "3.2.0",
-  "description": "DeepSeek Harness Desktop client plugin: a right-sidebar DeepSeek Chat tab that embeds chat.deepseek.com beside the conversation, with a guide card, Ctrl+Q and a session-header switch. Desktop-only; the Web surface registers no UI.",
+  "name": "@guojing6/dsh-webchat",
+  "version": "4.0.0",
+  "description": "DeepSeek Harness Desktop client plugin: one right-sidebar tab for the web editions of DeepSeek, Qwen, Doubao, Kimi, Zhipu, Yuanbao, ChatGPT and Gemini, with a provider switcher, guide card, Ctrl+Q and a session-header button. Desktop-only; the Web surface registers no UI.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -17,8 +17,10 @@
   "files": [
     "lib/index.js",
     "lib/client.js",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "icon.svg"
   ],
+  "icon": "./icon.svg",
   "engines": {
     "dsh": ">=0.2.1-alpha.3 <0.2.3-0"
   },
@@ -34,9 +36,16 @@
   "keywords": [
     "dsh",
     "dsh-plugin",
+    "webchat",
+    "web-chat",
     "deepseek",
-    "chat",
-    "web-chat"
+    "qwen",
+    "doubao",
+    "kimi",
+    "zhipu",
+    "yuanbao",
+    "chatgpt",
+    "gemini"
   ],
   "license": "MIT",
   "repository": {

@@ -1,4 +1,4 @@
-# deepseek-chat bundle patch: add the web chat entry row to the web roster.
+# webchat bundle patch: add the right-sidebar web chat entry row to the web roster.
 - insert:
-    - id: chat-entry
-      name: '@guojing6/dsh-deepseek-chat'
+    - id: webchat-entry
+      name: '@guojing6/dsh-webchat'
