@@ -24,7 +24,7 @@ DeepSeek Harness **Desktop** 客户端插件：把 **20 个内置网页版 AI �
 
 切换站点不会丢掉别的站点：每个访问过且仍启用的站点各自保留一个内嵌 `webview`，切回来页面状态还在；关闭某个站点会卸载它的 `webview`，释放内存，重新启用后从登录态快照恢复。
 
-关闭当前正在使用的站点时，会自动切到下一个仍启用的站点；全部关闭时显示“还没有启用网站”的空状态，点“选择网站”重新启用。自定义站点可以随时删除。
+关闭当前正在使用的站点时，会自动切到下一个仍启用的站点；全部关闭时显示“还没有启用网站”的空状态，点“选择网站”重新启用。自定义站点可以随时删除：点行尾的垃圾桶图标，再点“删除”确认；删除后当前站点会自动回退。
 
 右侧栏标签标题跟随当前站点（例如 `DeepSeek`、`通义千问`），没有选中站点时显示 `网页版 AI`。界面文字跟随 DSH 的语言（中文 / English）。
 
@@ -97,7 +97,7 @@ dsh plugin --profile desktop remove @guojing6/dsh-webchat
 - **纯客户端插件**：`lib/index.js` 只有空的服务端 `apply()`；`lib/client.js` 是单个 `window.__ModuleLoader__.load({ id, factory })`，只 `require("react")`，不依赖其他运行时模块。
 - **一个标签类型，二十个内置站点 + 自定义站点**：标签类型 `webchat`。工具栏只渲染启用的站点；每个访问过的启用站点各有一个内嵌 `webview`，未访问或已关闭的站点不创建。全部站点共用一个 DSH 浏览器工作区租约（`acquire("dsh-webchat")`），每个 `webview` 有自己的 lease。
 - **启用/关闭与排序**：启用结果存进宿主 `dsh-app://app` 的 `localStorage`，键 `dsh-webchat:enabled-providers`（JSON 数组）；顺序存在 `dsh-webchat:provider-order`。默认值是前 9 个站点；关闭当前站点会切到下一个启用站点；全部关闭时进入空状态。关闭站点会卸载对应 `webview`。
-- **自定义站点**：名称 + http(s) 网址存进 `dsh-webchat:custom-providers`（JSON 数组，最多 40 个），沿用内置站点的 `webview`、启用/关闭、排序、重载、外开和按 id 隔离的登录态镜像；删除自定义站点会同时从启用集合和顺序里移除。
+- **自定义站点**：名称 + http(s) 网址存进 `dsh-webchat:custom-providers`（JSON 数组，最多 40 个），沿用内置站点的 `webview`、启用/关闭、排序、重载、外开和按 id 隔离的登录态镜像；删除自定义站点会同时从启用集合和顺序里移除，删除前需在设置面板里二次确认。
 - **登录态镜像**：DSH 的右侧栏浏览器分区是内存分区，Desktop 重启后丢失。插件在站点加载完成、停止加载、每 60 秒以及销毁时，读取该站点的 `localStorage` 与 `document.cookie`，按站点写入宿主 `dsh-app://app` 的 `localStorage`（键 `dsh-webchat:session:<provider>`，版本 2）。下次打开先加载该站点的 `robots.txt` 作为引导页，写入快照后再进入应用页。
 - **UA**：内嵌 `webview` 的 UA 由插件重建为标准 Chromium UA，去掉 Electron / 产品标记，避免站点把内置浏览器当成不支持的客户端。
 - **链接**：`onOpenRequested` 只接受 `http/https`，交给右侧栏 Browser 标签；没有 Browser 标签时退回系统浏览器。
@@ -119,13 +119,14 @@ dsh plugin --profile desktop remove @guojing6/dsh-webchat
 
 ```bash
 npm run check   # node --check lib/client.js && node --check lib/index.js
-npm test        # node --test，31 个用例
+npm test        # node --test，33 个用例
 ```
 
-测试覆盖：manifest / patch / 服务端入口一致性、懒加载工厂、20 个内置站点目录、locale 键对齐、Web 端惰性、注册与清理、头部按钮、快捷键阻止/执行、标签标题跟随站点、默认 9 个站点按钮与懒挂载、启用集合持久化/过滤/空状态/当前站点回退、自定义站点校验/持久化/排序、登录态读写与上限、快照往返/过期/空快照、guest 租约/UA/引导页/错误路径、弹窗路由、销毁时抓取与释放、轮询抓取。
+测试覆盖：manifest / patch / 服务端入口一致性、懒加载工厂、20 个内置站点目录、locale 键对齐、Web 端惰性、注册与清理、头部按钮、快捷键阻止/执行、标签标题跟随站点、默认 9 个站点按钮与懒挂载、启用集合持久化/过滤/空状态/当前站点回退、自定义站点校验/持久化/排序/删除、登录态读写与上限、快照往返/过期/空快照、guest 租约/UA/引导页/错误路径、弹窗路由、销毁时抓取与释放、轮询抓取。
 
 ## 版本历史
 
+- **4.4.0**：自定义站点删除改为垃圾桶图标 + 行内二次确认；删除后自动切到下一个启用站点；修复启用集合为空时误恢复默认站点的问题；测试增至 33 项。
 - **4.3.0**：新增自定义站点（名称 + 网址）和站点排序，入口图标从彩色方块改为聊天图标；测试增至 31 项。
 - **4.2.0**：新增 Z.ai（智谱国际版，默认显示），站点总数 20，默认显示前 9 个；测试增至 28 项。
 - **4.1.0**：站点从 8 个扩展到 19 个（新增文心一言、讯飞星火、天工、商汤商量、360 智脑、Claude、Perplexity、Grok、Mistral、Poe、HuggingChat，默认隐藏）；新增“选择网站”启用/关闭功能，选择持久化，关闭站点即卸载 `webview`，全部关闭时显示空状态。

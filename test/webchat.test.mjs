@@ -381,6 +381,7 @@ function loadPlugin(options = {}) {
     "pickActiveProvider",
     "readCustomProviders",
     "writeCustomProviders",
+    "deleteCustomProvider",
     "readProviderOrder",
     "writeProviderOrder",
     "applyProviderOrder",
@@ -644,7 +645,7 @@ function createCookieJar(initial = "") {
 
 test("manifest, patch and server entry are consistent", () => {
   assert.equal(packageJson.name, PLUGIN_ID);
-  assert.equal(packageJson.version, "4.3.0");
+  assert.equal(packageJson.version, "4.4.0");
   assert.equal(packageJson.type, "module");
   assert.equal(packageJson.main, "lib/index.js");
   assert.equal(packageJson.dsh.manifestVersion, 1);
@@ -1026,6 +1027,37 @@ test("custom sites reject unsafe URLs and unknown ids keep the defaults clean", 
     loaded.storage.getItem(loaded.probe.ENABLED_KEY),
     JSON.stringify([list[0].id, "kimi"]),
   );
+});
+
+test("deleting a custom site clears it from storage, order and the enabled set", () => {
+  const loaded = loadPlugin();
+  const provider = loaded.probe.makeCustomProvider(
+    "Temp",
+    new URL("https://temp.example/chat"),
+  );
+  loaded.probe.writeCustomProviders([provider]);
+  loaded.probe.writeProviderOrder([provider.id, ...loaded.probe.readProviderOrder()]);
+  loaded.probe.writeEnabledProviders(
+    new Set([provider.id, "kimi"]),
+    [provider, ...loaded.probe.PROVIDERS],
+  );
+
+  const result = loaded.probe.deleteCustomProvider(provider.id);
+  assert.ok(result);
+  assert.deepEqual(result.customs, []);
+  assert.equal(result.order.includes(provider.id), false);
+  assert.equal(result.enabled.has(provider.id), false);
+  assert.equal(result.providers.some((item) => item.id === provider.id), false);
+  assert.deepEqual(loaded.probe.readCustomProviders(), []);
+  assert.equal(loaded.storage.getItem(loaded.probe.CUSTOM_KEY), "[]");
+  assert.deepEqual([...loaded.probe.readEnabledProviders()], ["kimi"]);
+  assert.equal(loaded.probe.deleteCustomProvider("custom-missing"), null);
+});
+
+test("unknown-only enabled lists do not silently re-enable the defaults", () => {
+  const loaded = loadPlugin();
+  loaded.storage.setItem(loaded.probe.ENABLED_KEY, JSON.stringify(["nope"]));
+  assert.deepEqual([...loaded.probe.readEnabledProviders()], []);
 });
 
 test("the body renders an enabled custom site as a normal provider", () => {
