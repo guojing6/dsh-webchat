@@ -632,7 +632,7 @@ function createCookieJar(initial = "") {
 
 test("manifest, patch and server entry are consistent", () => {
   assert.equal(packageJson.name, PLUGIN_ID);
-  assert.equal(packageJson.version, "4.5.2");
+  assert.equal(packageJson.version, "4.5.3");
   assert.equal(packageJson.type, "module");
   assert.equal(packageJson.main, "lib/index.js");
   assert.equal(packageJson.dsh.manifestVersion, 1);
