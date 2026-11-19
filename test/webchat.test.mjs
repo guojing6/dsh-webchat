@@ -39,6 +39,17 @@ const EXPECTED_PROVIDERS = [
   "yuanbao",
   "chatgpt",
   "gemini",
+  "wenxin",
+  "spark",
+  "tiangong",
+  "sensetime",
+  "zhinao",
+  "claude",
+  "perplexity",
+  "grok",
+  "mistral",
+  "poe",
+  "huggingchat",
 ];
 
 function compareVersions(left, right) {
@@ -359,6 +370,11 @@ function loadPlugin(options = {}) {
     "SESSION_PREFIX",
     "SESSION_VERSION",
     "LAST_PROVIDER_KEY",
+    "ENABLED_KEY",
+    "DEFAULT_ENABLED_IDS",
+    "readEnabledProviders",
+    "writeEnabledProviders",
+    "pickActiveProvider",
     "SNAPSHOT_LIMIT",
     "COOKIE_LIMIT",
     "WORKSPACE_KEY",
@@ -615,7 +631,7 @@ function createCookieJar(initial = "") {
 
 test("manifest, patch and server entry are consistent", () => {
   assert.equal(packageJson.name, PLUGIN_ID);
-  assert.equal(packageJson.version, "4.0.0");
+  assert.equal(packageJson.version, "4.1.0");
   assert.equal(packageJson.type, "module");
   assert.equal(packageJson.main, "lib/index.js");
   assert.equal(packageJson.dsh.manifestVersion, 1);
@@ -654,17 +670,17 @@ test("the client module is a lazy factory that only requires react", () => {
     "locale",
   ]);
   assert.equal(loaded.window.__ModuleLoader__ !== undefined, true);
-  assert.equal(loaded.probe.PROVIDERS.length, 8);
+  assert.equal(loaded.probe.PROVIDERS.length, 19);
 });
 
-test("the provider catalog is eight distinct https origins with inline icons", () => {
+test("the provider catalog is nineteen distinct https origins with inline icons", () => {
   const loaded = loadPlugin();
   const providers = loaded.probe.PROVIDERS;
   assert.deepEqual(
     providers.map((provider) => provider.id),
     EXPECTED_PROVIDERS,
   );
-  assert.equal(loaded.probe.PROVIDER_BY_ID.size, 8);
+  assert.equal(loaded.probe.PROVIDER_BY_ID.size, 19);
   for (const provider of providers) {
     assert.ok(provider.origin.startsWith("https://"), provider.id + " should use https");
     assert.ok(provider.url.startsWith(provider.origin + "/") || provider.url === provider.origin, provider.id);
@@ -722,8 +738,8 @@ test("apply registers the tab, guide, body, title, header button and shortcut", 
   assert.equal(guide.commandId, COMMAND_ID);
   assert.equal(guide.order, 35);
   assert.equal(guide.title(), "网页版 AI");
-  assert.match(guide.description(), /DeepSeek/);
-  assert.match(guide.description(), /Gemini/);
+  assert.match(guide.description(), /19/);
+  assert.match(guide.description(), /启用/);
   assert.equal(typeof guide.icon, "function");
 
   assert.equal(registrations.slots.length, 3);
@@ -867,7 +883,7 @@ test("the body shows eight provider buttons and lazily mounts only the active pa
   const actionButtons = buttons.filter((button) => button.props.className === "dsh-webchat-action");
   assert.deepEqual(
     actionButtons.map((button) => button.props["aria-label"]),
-    ["重新加载", "在浏览器中打开"],
+    ["重新加载", "在浏览器中打开", "选择网站"],
   );
   const stage = findAll(body, (element) => element.props.className === "dsh-webchat-stage")[0];
   assert.equal(stage.props.children.length, 1);
@@ -899,6 +915,67 @@ test("the body starts from the last provider stored by the host", () => {
   const stage = findAll(body, (element) => element.props.className === "dsh-webchat-stage")[0];
   assert.equal(stage.props.children.length, 1);
   assert.equal(stage.props.children[0].props.provider.id, "kimi");
+});
+
+test("the enabled-provider set defaults to the original eight and persists changes", () => {
+  const loaded = loadPlugin();
+  const enabled = loaded.probe.readEnabledProviders();
+  assert.deepEqual([...enabled], EXPECTED_PROVIDERS.slice(0, 8));
+  assert.equal(enabled.has("claude"), false);
+
+  loaded.probe.writeEnabledProviders(new Set(["claude", "kimi"]));
+  assert.equal(
+    loaded.storage.getItem(loaded.probe.ENABLED_KEY),
+    JSON.stringify(["kimi", "claude"]),
+  );
+  assert.deepEqual([...loaded.probe.readEnabledProviders()], ["kimi", "claude"]);
+
+  loaded.probe.writeEnabledProviders(new Set());
+  assert.deepEqual([...loaded.probe.readEnabledProviders()], []);
+});
+
+test("a stored provider list filters unknown ids and activates an enabled fallback", () => {
+  const loaded = loadPlugin();
+  loaded.storage.setItem(loaded.probe.ENABLED_KEY, JSON.stringify(["claude", "nope"]));
+  loaded.storage.setItem(LAST_PROVIDER_KEY, "deepseek");
+  const harness = createContext(loaded.probe);
+  loaded.exports.apply(harness.ctx);
+  const bodySlot = harness.registrations.slots.find(
+    (entry) => entry.spec.name === "sidebar.right.pane.tab",
+  );
+  const body = bodySlot.component({ useTabInfo: () => ({ tab: { id: "tab-1" } }) });
+  const providerButtons = findAll(
+    body,
+    (element) => element.props.className === "dsh-webchat-provider",
+  );
+  assert.equal(providerButtons.length, 1);
+  assert.equal(providerButtons[0].props["aria-label"], "Claude");
+  assert.equal(providerButtons[0].props["data-active"], "true");
+  const stage = findAll(body, (element) => element.props.className === "dsh-webchat-stage")[0];
+  assert.equal(stage.props.children[0].props.provider.id, "claude");
+});
+
+test("the body shows an empty state when every provider is disabled", () => {
+  const loaded = loadPlugin();
+  loaded.storage.setItem(loaded.probe.ENABLED_KEY, "[]");
+  const harness = createContext(loaded.probe);
+  loaded.exports.apply(harness.ctx);
+  const bodySlot = harness.registrations.slots.find(
+    (entry) => entry.spec.name === "sidebar.right.pane.tab",
+  );
+  const body = bodySlot.component({ useTabInfo: () => ({ tab: { id: "tab-1" } }) });
+  const providerButtons = findAll(
+    body,
+    (element) => element.props.className === "dsh-webchat-provider",
+  );
+  assert.equal(providerButtons.length, 0);
+  const empty = findAll(body, (element) => element.props.className === "dsh-webchat-empty")[0];
+  assert.ok(empty);
+  assert.match(textOf(empty), /还没有启用网站/);
+  assert.equal(
+    findAll(body, (element) => element.props.className === "dsh-webchat-stage").length,
+    0,
+  );
 });
 
 test("readStorageScript captures same-origin localStorage and cookies within the caps", () => {
